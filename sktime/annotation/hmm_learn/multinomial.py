@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Hidden Markov Model with Multinomial emissions.
+Hidden Markov Model with multinomial emissions.
 
 Please see the original library
 (https://github.com/hmmlearn/hmmlearn/blob/main/lib/hmmlearn/hmm.py)
@@ -70,14 +70,14 @@ class MultinomialHMM(BaseHMMLearn):
 
     Examples
     --------
-    >>> from hmmlearn.hmm import MultinomialHMM # doctest: +SKIP
+    >>> from sktime.annotation.hmm_learn import MultinomialHMM # doctest: +SKIP
     """
 
     def __init__(
         self,
         n_components: int = 1,
         n_trials: int = None,
-        startprob_prio: float = 1.0,
+        startprob_prior: float = 1.0,
         transmat_prior: float = 1.0,
         algorithm: str = "viterbi",
         random_state: float = None,
@@ -91,7 +91,7 @@ class MultinomialHMM(BaseHMMLearn):
 
         self.n_components = n_components
         self.n_trials = n_trials
-        self.startprob_prio = startprob_prio
+        self.startprob_prior = startprob_prior
         self.transmat_prior = transmat_prior
         self.algorithm = algorithm
         self.random_state = random_state
@@ -110,7 +110,7 @@ class MultinomialHMM(BaseHMMLearn):
         self._hmm_estimator = _MultinomialHMM(
             self.n_components,
             self.n_trials,
-            self.startprob_prio,
+            self.startprob_prior,
             self.transmat_prior,
             self.algorithm,
             self.random_state,
