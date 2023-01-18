@@ -6,7 +6,7 @@ __author__ = ["miraep8"]
 import pytest
 from numpy import array_equal
 
-from sktime.annotation.datagen import piecewise_normal
+from sktime.annotation.datagen import piecewise_multinomial, piecewise_normal
 from sktime.utils.validation._dependencies import _check_soft_dependencies
 
 
@@ -67,10 +67,10 @@ def test_MultinomialHMM_wrapper():
 
     from sktime.annotation.hmm_learn import MultinomialHMM
 
-    data = piecewise_normal(
-        means=[2, 4, 1], lengths=[10, 35, 40], random_state=7
-    ).reshape((-1, 1))
-    hmmlearn_model = MultinomialHMM(n_components=3, random_state=7)
+    data = piecewise_multinomial(
+        20, lengths=[3, 2], p_vals=[[1 / 4, 3 / 4], [3 / 4, 1 / 4]], random_state=7
+    )
+    hmmlearn_model = _MultinomialHMM(n_components=3, random_state=7)
     sktime_model = MultinomialHMM(n_components=3, random_state=7)
     hmmlearn_model.fit(X=data)
     sktime_model.fit(X=data)
