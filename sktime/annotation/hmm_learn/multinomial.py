@@ -70,7 +70,14 @@ class MultinomialHMM(BaseHMMLearn):
 
     Examples
     --------
-    >>> from hmmlearn.hmm import MultinomialHMM # doctest: +SKIP
+    >>> from sktime.annotation.hmm_learn import MultinomialHMM # doctest: +SKIP
+    >>> from sktime.annotation.datagen import piecewise_multinomial # doctest: +SKIP
+    >>> data = piecewise_multinomial( # doctest: +SKIP
+    ...    20, lengths=[3, 2], p_vals=[[1/4, 3/4],
+            [3/4, 1/4]], random_state=42)
+    >>> model = MultinomialHMM(n_components=3, random_state=7) # doctest: +SKIP
+    >>> model = model.fit(data) # doctest: +SKIP
+    >>> labeled_data = model.predict(data) # doctest: +SKIP
     """
 
     def __init__(

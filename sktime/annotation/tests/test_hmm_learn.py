@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Tests for hmmlearn wrapper annotation estimator."""
 
-__author__ = ["miraep8"]
+__author__ = ["miraep8", "klam-data", "pyyim", "mgorlin"]
 
 import pytest
 from numpy import array_equal
