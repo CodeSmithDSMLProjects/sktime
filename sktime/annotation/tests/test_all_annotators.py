@@ -27,7 +27,7 @@ def test_output_type(Estimator):
         )
         estimator.fit(arg)
         arg = piecewise_multinomial(
-            20, lengths=[3, 2], p_vals=[[2 / 4, 3 / 4], [2 / 4, 1 / 4]], random_state=42
+            20, lengths=[3, 2], p_vals=[[2 / 5, 3 / 5], [3 / 5, 2 / 5]], random_state=42
         )
         y_pred = estimator.predict(arg)
         assert isinstance(y_pred, (pd.Series, np.ndarray))
