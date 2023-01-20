@@ -3,82 +3,61 @@
 Implements Christiano Fitzgerald bandpass filter transformation.
 
 Please see the original library
-(https://github.com/statsmodels/statsmodels/blob/main/statsmodels/tsa/filters/bk_filter.py)
+(https://github.com/statsmodels/statsmodels/blob/main/statsmodels/tsa/filters/cf_filter.py)
 """
 # copyright: sktime developers, BSD-3-Clause License (see LICENSE file)
 
-__author__ = ["mgorlin", "klam-data", "pyyim"]
+__author__ = ["klam-data", "pyyim", "mgorlin"]
 __all__ = ["CFFilter"]
 
 
 import numpy as np
 import pandas as pd
-from scipy.signal import fftconvolve
 from statsmodels.tools.validation import PandasWrapper, array_like
 
 from sktime.transformations.base import BaseTransformer
 
 
-class BKFilter(BaseTransformer):
-    """Filter a times series using the Baxter-King filter.
+class CFFilter(BaseTransformer):
+    """Filter a times series using the Christiano Fitzgerald filter.
 
-    This is a wrapper around statsmodels' bkfilter function
-    (see 'sm.tsa.filters.bkfilter').
-
-    The Baxter-King filter is intended for economic and econometric time series
-    data and deals with the periodicity of the business cycle. Applying their
-    band-pass filter to a series will produce a new series that does not contain
-    fluctuations at a higher or lower frequency than those of the business cycle.
-    Baxter-King follow Burns and Mitchell’s work on business cycles, which suggests
-    that U.S. business cycles typically last from 1.5 to 8 years.
+    This is a wrapper around statsmodels' cffilter function
+    (see 'sm.tsa.filters.cf_filter.cffilter').
 
     Parameters
     ----------
+    x : array_like
+        The 1 or 2d array to filter. If 2d, variables are assumed to be in
+        columns.
     low : float
-        Minimum period for oscillations. Baxter and King recommend a value of 6
-        for quarterly data and 1.5 for annual data.
-
+        Minimum period of oscillations. Features below low periodicity are
+        filtered out. Default is 6 for quarterly data, giving a 1.5 year
+        periodicity.
     high : float
-        Maximum period for oscillations. BK recommend 32 for U.S. business cycle
-        quarterly data and 8 for annual data.
+        Maximum period of oscillations. Features above high periodicity are
+        filtered out. Default is 32 for quarterly data, giving an 8 year
+        periodicity.
+    drift : bool
+        Whether or not to remove a trend from the data. The trend is estimated
+        as np.arange(nobs)*(x[-1] - x[0])/(len(x)-1).
 
-    K : int
-        Lead-lag length of the filter. Baxter and King suggest a truncation
-        length of 12 for quarterly data and 3 for annual data.
-
-    Notes
-    -----
-    Returns a centered weighted moving average of the original series. Where
-    the weights a[j] are computed ::
-      a[j] = b[j] + theta, for j = 0, +/-1, +/-2, ... +/- K
-      b[0] = (omega_2 - omega_1)/pi
-      b[j] = 1/(pi*j)(sin(omega_2*j)-sin(omega_1*j), for j = +/-1, +/-2,...
-    and theta is a normalizing constant ::
-      theta = -sum(b)/(2K+1)
-    See the notebook `Time Series Filters
-    <../examples/notebooks/generated/tsa_filters.html>`__ for an overview.
-
-    References
-    ----------
-    Baxter, M. and R. G. King. "Measuring Business Cycles: Approximate
-        Band-Pass Filters for Economic Time Series." *Review of Economics and
-        Statistics*, 1999, 81(4), 575-593.
+    Returns
+    -------
+    cycle : array_like
+        The features of x between the periodicities low and high.
+    trend : array_like
+        The trend in the data with the cycles removed.
 
     Examples
     --------
-    >>> from sktime.transformations.series.bkfilter import BKFilter
+    >>> from sktime.transformations.series.cffilter import CFFilter
     >>> import pandas as pd
     >>> import statsmodels.api as sm
     >>> dta = sm.datasets.macrodata.load_pandas().data
     >>> index = pd.date_range(start='1959Q1', end='2009Q4', freq='Q')
     >>> dta.set_index(index, inplace=True)
-    >>> bk = BKFilter(6, 24, 12)
-    >>> cycles = bk.fit_transform(X=dta[['realinv']])
-    >>> import matplotlib.pyplot as plt
-    >>> fig, ax = plt.subplots()
-    >>> cycles.plot(ax=ax, style=['r--', 'b-'])
-    >>> plt.show()
-    .. plot:: plots/bkf_plot.py
+    >>> cf = CFFilter(6, 24, 12)
+    >>> cf_cycles, cf_trend = sm.tsa.filters.cffilter(dta[["infl", "unemp"]])
     """
 
     _tags = {
@@ -98,7 +77,7 @@ class BKFilter(BaseTransformer):
         "fit_is_empty": True,  # is fit empty and can be skipped? Yes = True
         "transform-returns-same-time-index": False,
         # does transform return have the same time index as input X
-        "capability:unequal_length": False,
+        "capability:unequal_length": True,
         # can the transformer handle unequal length time series (if passed Panel)?
         "handles-missing-data": False,  # can estimator handle missing data?
         "remember_data": False,  # whether all data seen is remembered as self._X
@@ -109,12 +88,12 @@ class BKFilter(BaseTransformer):
         self,
         low=6,
         high=32,
-        K=12,
+        drift=True,
     ):
         self.low = low
         self.high = high
-        self.K = K
-        super(BKFilter, self).__init__()
+        self.drift = drift
+        super(CFFilter, self).__init__()
 
     def _transform(self, X, y=None):
         """Transform X and return a transformed version.
@@ -130,22 +109,38 @@ class BKFilter(BaseTransformer):
         -------
         transformed cyclical version of X
         """
+        if self.low < 2:
+            raise ValueError("low must be >= 2")
         pw = PandasWrapper(X)
-        X = array_like(X, "X", maxdim=2)
-        omega_1 = 2.0 * np.pi / self.high
-        omega_2 = 2.0 * np.pi / self.low
-        bweights = np.zeros(2 * self.K + 1)
-        bweights[self.K] = (omega_2 - omega_1) / np.pi
-        j = np.arange(1, int(self.K) + 1)
-        weights = 1 / (np.pi * j) * (np.sin(omega_2 * j) - np.sin(omega_1 * j))
-        bweights[self.K + j] = weights
-        bweights[: self.K] = weights[::-1]
-        bweights -= bweights.mean()
-        if X.ndim == 2:
-            bweights = bweights[:, None]
-        X = fftconvolve(X, bweights, mode="valid")
+        X = array_like(X, "X", ndim=2)
+        nobs, nseries = X.shape
+        a = 2 * np.pi / self.high
+        b = 2 * np.pi / self.low
 
-        return pw.wrap(X, append="cycle", trim_start=self.K, trim_end=self.K)
+        if self.drift:  # get drift adjusted series
+            X = X - np.arange(nobs)[:, None] * (X[-1] - X[0]) / (nobs - 1)
+
+        J = np.arange(1, nobs + 1)
+        Bj = (np.sin(b * J) - np.sin(a * J)) / (np.pi * J)
+        B0 = (b - a) / np.pi
+        Bj = np.r_[B0, Bj][:, None]
+        y = np.zeros((nobs, nseries))
+
+        for i in range(nobs):
+            B = -0.5 * Bj[0] - np.sum(Bj[1 : -i - 2])
+            A = -Bj[0] - np.sum(Bj[1 : -i - 2]) - np.sum(Bj[1:i]) - B
+            y[i] = (
+                Bj[0] * X[i]
+                + np.dot(Bj[1 : -i - 2].T, X[i + 1 : -1])
+                + B * X[-1]
+                + np.dot(Bj[1:i].T, X[1:i][::-1])
+                + A * X[0]
+            )
+        y = y.squeeze()
+
+        cycle, trend = y.squeeze(), X.squeeze() - y
+
+        return pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
 
     @classmethod
     def get_test_params(cls, parameter_set="default"):
@@ -166,5 +161,5 @@ class BKFilter(BaseTransformer):
             `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
             `create_test_instance` uses the first (or only) dictionary in `params`
         """
-        params = {"low": 6, "high": 24, "K": 12}
+        params = {"low": 6, "high": 24, "drift": True}
         return params
