@@ -80,6 +80,11 @@ class MultinomialHMM(BaseHMMLearn):
     >>> labeled_data = model.predict(data) # doctest: +SKIP
     """
 
+    _tags = {
+        "distribution_type": "Multinomial",
+        # Tag to determine test for test_all_annotators
+    }
+
     def __init__(
         self,
         n_components: int = 1,

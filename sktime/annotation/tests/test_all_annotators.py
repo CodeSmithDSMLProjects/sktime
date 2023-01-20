@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
+from sktime.annotation.datagen import piecewise_multinomial
 from sktime.registry import all_estimators
 from sktime.utils._testing.annotation import make_annotation_problem
 from sktime.utils.validation._dependencies import _check_estimator_deps
@@ -20,8 +21,20 @@ def test_output_type(Estimator):
 
     estimator = Estimator.create_test_instance()
 
-    arg = make_annotation_problem(n_timepoints=50)
-    estimator.fit(arg)
-    arg = make_annotation_problem(n_timepoints=10)
-    y_pred = estimator.predict(arg)
-    assert isinstance(y_pred, (pd.Series, np.ndarray))
+    if estimator.get_tag("distribution_type") == "Multinomial":
+        arg = piecewise_multinomial(
+            20, lengths=[3, 2], p_vals=[[1 / 4, 3 / 4], [3 / 4, 1 / 4]], random_state=42
+        )
+        estimator.fit(arg)
+        arg = piecewise_multinomial(
+            20, lengths=[3, 2], p_vals=[[2 / 4, 3 / 4], [2 / 4, 1 / 4]], random_state=42
+        )
+        y_pred = estimator.predict(arg)
+        assert isinstance(y_pred, (pd.Series, np.ndarray))
+
+    else:
+        arg = make_annotation_problem(n_timepoints=50)
+        estimator.fit(arg)
+        arg = make_annotation_problem(n_timepoints=10)
+        y_pred = estimator.predict(arg)
+        assert isinstance(y_pred, (pd.Series, np.ndarray))
