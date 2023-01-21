@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
-"""Tests for BKfilter wrapper annotation estimator."""
+"""Tests for CFFilter wrapper annotation estimator."""
 
-__author__ = ["klam-data", "pyyim"]
+__author__ = ["klam-data", "pyyim", "mgorlin"]
 
 import pandas as pd
 import pytest
@@ -15,16 +15,16 @@ from sktime.utils.validation._dependencies import _check_soft_dependencies
     reason="skip test if required soft dependency for statsmodels.api not available",
 )
 def test_BKFilter_wrapper():
-    """Verify that the wrapped BKFilter estimator agrees with statsmodel."""
+    """Verify that the wrapped CFFilter estimator agrees with statsmodel."""
     # moved all potential soft dependency import inside the test:
     import statsmodels.api as sm
 
-    from sktime.transformations.series.bkfilter import BKFilter as _BKFilter
+    from sktime.transformations.series.cffilter import CFFilter as _CFFilter
 
     dta = sm.datasets.macrodata.load_pandas().data
     index = pd.date_range(start="1959Q1", end="2009Q4", freq="Q")
     dta.set_index(index, inplace=True)
-    sm_cycles = sm.tsa.filters.bkfilter(dta[["realinv"]], 6, 24, 12)
-    bk = _BKFilter(6, 24, 12)
-    sk_cycles = bk.fit_transform(X=dta[["realinv"]])
+    sm_cycles = sm.tsa.filters.cffilter(dta[["infl", "unemp"]], 6, 24, 12)
+    cf = _CFFilter(6, 24, 12)
+    sk_cycles = cf.fit_transform(X=dta[["infl", "unemp"]])
     assert array_equal(sm_cycles, sk_cycles)

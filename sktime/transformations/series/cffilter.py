@@ -56,14 +56,14 @@ class CFFilter(BaseTransformer):
     >>> dta = sm.datasets.macrodata.load_pandas().data
     >>> index = pd.date_range(start='1959Q1', end='2009Q4', freq='Q')
     >>> dta.set_index(index, inplace=True)
-    >>> cf = CFFilter(6, 24, 12)
+    >>> cf = CFFilter(6, 32)
     >>> cf_cycles, cf_trend = sm.tsa.filters.cffilter(dta[["infl", "unemp"]])
     """
 
     _tags = {
         "scitype:transform-input": "Series",
         # what is the scitype of X: Series, or Panel
-        "scitype:transform-output": "Series",
+        "scitype:transform-output": "Panel",
         # what scitype is returned: Primitives, Series, Panel
         "scitype:instancewise": True,  # is this an instance-wise transform?
         "univariate-only": False,  # can the transformer handle multivariate X?
@@ -95,7 +95,7 @@ class CFFilter(BaseTransformer):
         self.drift = drift
         super(CFFilter, self).__init__()
 
-    def _transform(self, X, y=None):
+    def transform(self, X, y=None):
         """Transform X and return a transformed version.
 
         private _transform containing core logic, called from transform
@@ -112,6 +112,7 @@ class CFFilter(BaseTransformer):
         if self.low < 2:
             raise ValueError("low must be >= 2")
         pw = PandasWrapper(X)
+        # df = pd.DataFrame(X.copy())
         X = array_like(X, "X", ndim=2)
         nobs, nseries = X.shape
         a = 2 * np.pi / self.high
@@ -140,6 +141,21 @@ class CFFilter(BaseTransformer):
 
         cycle, trend = y.squeeze(), X.squeeze() - y
 
+        # cycle_cols = []
+        # for i in df.columns:
+        #     cycle_cols.append(str(i)+'_cycle')
+
+        # trend_cols = []
+        # for i in df.columns:
+        #     trend_cols.append(str(i)+'_trend')
+
+        # cycle = pd.DataFrame(cycle, columns=cycle_cols, index=df.index)
+        # trend = pd.DataFrame(trend, columns=trend_cols, index=df.index)
+
+        # return cycle, trend
+        # return pd.DataFrame(cycle, columns=cycle_cols, index=df.index),
+        # pd.DataFrame(trend, columns=trend_cols, index=df.index)
+
         return pw.wrap(cycle, append="cycle"), pw.wrap(trend, append="trend")
 
     @classmethod
@@ -161,5 +177,5 @@ class CFFilter(BaseTransformer):
             `MyClass(**params)` or `MyClass(**params[i])` creates a valid test instance.
             `create_test_instance` uses the first (or only) dictionary in `params`
         """
-        params = {"low": 6, "high": 24, "drift": True}
+        params = {"low": 6, "high": 32, "drift": True}
         return params
