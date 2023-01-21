@@ -24,7 +24,7 @@ def test_BKFilter_wrapper():
     dta = sm.datasets.macrodata.load_pandas().data
     index = pd.date_range(start="1959Q1", end="2009Q4", freq="Q")
     dta.set_index(index, inplace=True)
-    sm_cycles = sm.tsa.filters.cffilter(dta[["infl", "unemp"]], 6, 24, 12)
-    cf = _CFFilter(6, 24, 12)
-    sk_cycles = cf.fit_transform(X=dta[["infl", "unemp"]])
+    sm_cycles, sm_trend = sm.tsa.filters.cffilter(dta[["infl", "unemp"]])
+    cf = _CFFilter(6, 32)
+    sk_cycles, sk_trend = cf.fit_transform(X=dta[["infl", "unemp"]])
     assert array_equal(sm_cycles, sk_cycles)
