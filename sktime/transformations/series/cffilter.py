@@ -63,7 +63,7 @@ class CFFilter(BaseTransformer):
     _tags = {
         "scitype:transform-input": "Series",
         # what is the scitype of X: Series, or Panel
-        "scitype:transform-output": "Panel",
+        "scitype:transform-output": "Series",
         # what scitype is returned: Primitives, Series, Panel
         "scitype:instancewise": True,  # is this an instance-wise transform?
         "univariate-only": False,  # can the transformer handle multivariate X?
@@ -95,6 +95,7 @@ class CFFilter(BaseTransformer):
         self.drift = drift
         super(CFFilter, self).__init__()
 
+    # Have to change _transform to public method transform to prevent change in data
     def transform(self, X, y=None):
         """Transform X and return a transformed version.
 
